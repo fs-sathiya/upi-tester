@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deep Link Tester</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f1117; min-height: 100vh; padding: 24px 16px; color: #e2e8f0; }
+
+  h1 { text-align: center; font-size: 22px; font-weight: 700; margin-bottom: 4px; background: linear-gradient(135deg, #667eea, #48bb78); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .subtitle { text-align: center; color: #718096; font-size: 13px; margin-bottom: 24px; }
+
+  .card { background: #1a1d2e; border: 1px solid #2d3748; border-radius: 14px; padding: 20px; margin-bottom: 18px; }
+  .card-title { font-size: 12px; font-weight: 700; color: #718096; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 14px; }
+
+  /* URL Input */
+  .url-input-wrap { display: flex; gap: 8px; align-items: stretch; }
+  .url-input-wrap textarea { flex: 1; padding: 12px 14px; background: #0f1117; border: 1.5px solid #2d3748; border-radius: 10px; font-size: 13px; color: #e2e8f0; resize: none; height: 80px; outline: none; font-family: 'Courier New', monospace; line-height: 1.6; transition: border 0.2s; }
+  .url-input-wrap textarea:focus { border-color: #667eea; }
+  .url-input-wrap textarea::placeholder { color: #4a5568; }
+
+  /* Presets */
+  .preset-label { font-size: 11px; color: #718096; margin-bottom: 8px; }
+  .presets { display: flex; flex-wrap: wrap; gap: 8px; }
+  .preset { padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1.5px solid transparent; transition: all 0.2s; }
+  .preset:hover { opacity: 0.85; transform: translateY(-1px); }
+  .preset.upi     { background: #1a365d; color: #63b3ed; border-color: #2b6cb0; }
+  .preset.gpay    { background: #1a2744; color: #4285F4; border-color: #2a4a8a; }
+  .preset.phonepe { background: #2d1b4e; color: #b794f4; border-color: #553c9a; }
+  .preset.paytm   { background: #0d2d3d; color: #4fd1c5; border-color: #1a5261; }
+  .preset.custom  { background: #1a2e1a; color: #68d391; border-color: #276749; }
+
+  /* QR */
+  .qr-wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 20px; background: #0f1117; border-radius: 12px; border: 1.5px dashed #2d3748; }
+  #qrcode { background: white; padding: 14px; border-radius: 10px; }
+  #qrcode canvas, #qrcode img { display: block; }
+  .qr-empty { color: #4a5568; font-size: 13px; text-align: center; padding: 40px 0; }
+  .qr-url-text { font-size: 11px; color: #4a5568; text-align: center; word-break: break-all; max-width: 260px; font-family: monospace; }
+
+  .btn-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .btn { padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; }
+  .btn:hover { transform: translateY(-1px); }
+  .btn-primary { background: #667eea; color: #fff; }
+  .btn-primary:hover { background: #5a67d8; }
+  .btn-ghost { background: #2d3748; color: #a0aec0; }
+  .btn-ghost:hover { background: #3d4a5c; color: #fff; }
+
+  /* Launch Buttons */
+  .launch-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .launch-btn { display: flex; align-items: center; gap: 10px; padding: 14px; border-radius: 12px; background: #0f1117; border: 1.5px solid #2d3748; cursor: pointer; transition: all 0.2s; text-decoration: none; }
+  .launch-btn:hover { border-color: #667eea; background: #1a1d2e; transform: translateY(-2px); }
+  .launch-btn .ico { font-size: 22px; }
+  .launch-btn .info .lname { font-size: 13px; font-weight: 700; color: #e2e8f0; }
+  .launch-btn .info .ldesc { font-size: 11px; color: #718096; margin-top: 2px; }
+  .launch-btn.full { grid-column: 1 / -1; }
+
+  /* Result */
+  .result-box { background: #0f1117; border-radius: 8px; padding: 12px 14px; margin-top: 14px; border: 1px solid #2d3748; }
+  .result-label { font-size: 11px; color: #718096; margin-bottom: 6px; }
+  .result-url { font-size: 11px; color: #68d391; word-break: break-all; font-family: 'Courier New', monospace; line-height: 1.6; }
+
+  .copy-btn { background: #2d3748; border: none; color: #a0aec0; font-size: 11px; padding: 4px 10px; border-radius: 5px; cursor: pointer; margin-top: 8px; }
+  .copy-btn:hover { color: #fff; }
+
+  .tag { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 99px; font-weight: 600; margin-left: 6px; vertical-align: middle; }
+  .tag.android { background: #1a4731; color: #68d391; }
+  .tag.ios { background: #1a3358; color: #63b3ed; }
+  .tag.both { background: #3d2a00; color: #f6ad55; }
+
+  .note { background: #1a1200; border-left: 3px solid #f6ad55; padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 12px; color: #b7791f; line-height: 1.7; margin-top: 14px; }
+</style>
+</head>
+<body>
+
+<h1>🔗 Deep Link Tester</h1>
+<p class="subtitle">Paste any deep link URL — generate QR or launch directly</p>
+
+<!-- URL Input -->
+<div class="card">
+  <div class="card-title">🔤 Deep Link URL</div>
+  <div class="url-input-wrap">
+    <textarea id="deeplink" placeholder="Paste your deep link here…&#10;e.g. upi://pay?pa=merchant@razorpay&am=10&cu=INR"></textarea>
+  </div>
+  <br>
+  <div class="preset-label">⚡ Quick Presets</div>
+  <div class="presets">
+    <div class="preset upi"     onclick="setPreset('upi')">🔷 UPI (Any App)</div>
+    <div class="preset gpay"    onclick="setPreset('gpay')">💳 GPay</div>
+    <div class="preset phonepe" onclick="setPreset('phonepe')">💜 PhonePe</div>
+    <div class="preset paytm"   onclick="setPreset('paytm')">💙 Paytm</div>
+    <div class="preset custom"  onclick="setPreset('custom')">🌐 Custom HTTPS</div>
+  </div>
+</div>
+
+<!-- QR Code -->
+<div class="card">
+  <div class="card-title">📷 QR Code <span class="tag both">Scan with UPI App</span></div>
+  <div class="qr-wrap">
+    <div id="qrcode"><div class="qr-empty">Enter a URL above to generate QR</div></div>
+    <div class="qr-url-text" id="qr-url-text"></div>
+  </div>
+  <br>
+  <div class="btn-row">
+    <button class="btn btn-primary" onclick="generateQR()">🔄 Generate QR</button>
+    <button class="btn btn-ghost"   onclick="downloadQR()">⬇️ Download</button>
+    <button class="btn btn-ghost"   onclick="copyLink()">📋 Copy URL</button>
+  </div>
+  <div class="note">
+    📱 <strong>iPhone:</strong> Open GPay / PhonePe / Paytm → use the <strong>in-app scanner</strong>. iPhone camera will open WhatsApp Pay instead.<br>
+    🤖 <strong>Android:</strong> Camera or any UPI app scanner works fine.
+  </div>
+</div>
+
+<!-- Launch Buttons -->
+<div class="card">
+  <div class="card-title">⚡ Launch Directly on This Device</div>
+  <div class="launch-wrap">
+    <a class="launch-btn" href="#" onclick="return launch()">
+      <div class="ico">🌐</div>
+      <div class="info">
+        <div class="lname">Open URL</div>
+        <div class="ldesc">Launch deep link now</div>
+      </div>
+    </a>
+    <a class="launch-btn" href="#" onclick="return launchApp('gpay')">
+      <div class="ico">💳</div>
+      <div class="info">
+        <div class="lname">GPay <span class="tag android">Android</span></div>
+        <div class="ldesc">intent:// scheme</div>
+      </div>
+    </a>
+    <a class="launch-btn" href="#" onclick="return launchApp('phonepe')">
+      <div class="ico">💜</div>
+      <div class="info">
+        <div class="lname">PhonePe <span class="tag android">Android</span></div>
+        <div class="ldesc">intent:// scheme</div>
+      </div>
+    </a>
+    <a class="launch-btn" href="#" onclick="return launchApp('paytm')">
+      <div class="ico">💙</div>
+      <div class="info">
+        <div class="lname">Paytm <span class="tag android">Android</span></div>
+        <div class="ldesc">intent:// scheme</div>
+      </div>
+    </a>
+    <a class="launch-btn" href="#" onclick="return launchIOS('gpay')">
+      <div class="ico">💳</div>
+      <div class="info">
+        <div class="lname">GPay <span class="tag ios">iOS</span></div>
+        <div class="ldesc">tez:// scheme</div>
+      </div>
+    </a>
+    <a class="launch-btn" href="#" onclick="return launchIOS('phonepe')">
+      <div class="ico">💜</div>
+      <div class="info">
+        <div class="lname">PhonePe <span class="tag ios">iOS</span></div>
+        <div class="ldesc">phonepe:// scheme</div>
+      </div>
+    </a>
+    <a class="launch-btn full" href="#" onclick="return launchIOS('paytm')">
+      <div class="ico">💙</div>
+      <div class="info">
+        <div class="lname">Paytm <span class="tag ios">iOS</span></div>
+        <div class="ldesc">paytmmp:// scheme</div>
+      </div>
+    </a>
+  </div>
+
+  <div class="result-box">
+    <div class="result-label">Last Launched URL</div>
+    <div class="result-url" id="last-url">—</div>
+    <button class="copy-btn" onclick="copyLast()">📋 Copy</button>
+  </div>
+</div>
+
+<script>
+let qrInstance = null;
+
+const presets = {
+  upi:     'upi://pay?pa=merchant@razorpay&pn=Test Store&am=1.00&cu=INR&tn=Test Payment&tr=TXN123',
+  gpay:    'tez://upi/pay?pa=merchant@razorpay&pn=Test Store&am=1.00&cu=INR&tn=Test Payment&tr=TXN123',
+  phonepe: 'phonepe://pay?pa=merchant@razorpay&pn=Test Store&am=1.00&cu=INR&tn=Test Payment&tr=TXN123',
+  paytm:   'paytmmp://pay?pa=merchant@razorpay&pn=Test Store&am=1.00&cu=INR&tn=Test Payment&tr=TXN123',
+  custom:  'https://razorpay.com'
+};
+
+function getURL() {
+  return document.getElementById('deeplink').value.trim();
+}
+
+function setPreset(type) {
+  document.getElementById('deeplink').value = presets[type];
+  generateQR();
+}
+
+function extractUPIParams(url) {
+  try {
+    const queryStr = url.includes('?') ? url.split('?')[1] : '';
+    return queryStr;
+  } catch { return ''; }
+}
+
+function generateQR() {
+  const url = getURL();
+  if (!url) return alert('Please enter a URL first.');
+  document.getElementById('qr-url-text').textContent = url;
+  const container = document.getElementById('qrcode');
+  container.innerHTML = '';
+  qrInstance = new QRCode(container, {
+    text: url,
+    width: 200,
+    height: 200,
+    colorDark: '#1a202c',
+    colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.H
+  });
+}
+
+function downloadQR() {
+  const canvas = document.querySelector('#qrcode canvas');
+  if (!canvas) return alert('Generate a QR code first.');
+  const a = document.createElement('a');
+  a.download = 'deeplink-qr.png';
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+}
+
+function copyLink() {
+  const url = getURL();
+  if (!url) return;
+  navigator.clipboard.writeText(url).then(() => showCopied());
+}
+
+function copyLast() {
+  const url = document.getElementById('last-url').textContent;
+  if (url === '—') return;
+  navigator.clipboard.writeText(url).then(() => showCopied());
+}
+
+function showCopied() {
+  const btns = document.querySelectorAll('.copy-btn');
+  btns.forEach(b => { b.textContent = '✅ Copied!'; setTimeout(() => b.textContent = '📋 Copy', 2000); });
+}
+
+function setLastURL(url) {
+  document.getElementById('last-url').textContent = url;
+}
+
+function launch() {
+  const url = getURL();
+  if (!url) { alert('Enter a URL first.'); return false; }
+  setLastURL(url);
+  window.location.href = url;
+  return false;
+}
+
+function launchApp(app) {
+  const raw = getURL();
+  if (!raw) { alert('Enter a URL first.'); return false; }
+  const p = extractUPIParams(raw);
+  const urls = {
+    gpay:    `intent://upi/pay?${p}#Intent;scheme=tez;package=com.google.android.apps.npe;end`,
+    phonepe: `intent://pay?${p}#Intent;scheme=phonepe;package=com.phonepe.app;end`,
+    paytm:   `intent://pay?${p}#Intent;action=android.intent.action.VIEW;scheme=paytmmp;package=net.one97.paytm;end`,
+  };
+  setLastURL(urls[app]);
+  window.location.href = urls[app];
+  return false;
+}
+
+function launchIOS(app) {
+  const raw = getURL();
+  if (!raw) { alert('Enter a URL first.'); return false; }
+  const p = extractUPIParams(raw);
+  const urls = {
+    gpay:    `tez://upi/pay?${p}`,
+    phonepe: `phonepe://pay?${p}`,
+    paytm:   `paytmmp://pay?${p}`,
+  };
+  setLastURL(urls[app]);
+  window.location.href = urls[app];
+  return false;
+}
+
+// Auto-generate QR on paste/type
+document.getElementById('deeplink').addEventListener('input', () => {
+  if (getURL().length > 5) generateQR();
+});
+
+// Load default
+setPreset('upi');
+</script>
+</body>
+</html>
