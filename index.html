@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UPI Deep Link Tester</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f4f8; min-height: 100vh; padding: 24px 16px; }
+  h1 { text-align: center; color: #1a202c; font-size: 22px; margin-bottom: 4px; }
+  .subtitle { text-align: center; color: #718096; font-size: 13px; margin-bottom: 24px; }
+  .card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 20px; }
+  .card h2 { font-size: 14px; font-weight: 600; color: #4a5568; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 14px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field.full { grid-column: 1 / -1; }
+  label { font-size: 12px; font-weight: 600; color: #4a5568; }
+  input { padding: 9px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 14px; color: #1a202c; outline: none; transition: border 0.2s; }
+  input:focus { border-color: #667eea; }
+
+  /* QR Section */
+  .qr-tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .qr-tab { flex: 1; min-width: 80px; padding: 10px 8px; border: 2px solid #e2e8f0; border-radius: 10px; background: #fff; font-size: 13px; font-weight: 600; color: #718096; cursor: pointer; transition: all 0.2s; text-align: center; }
+  .qr-tab:hover { border-color: #a0aec0; }
+  .qr-tab.active { color: #fff; border-color: transparent; }
+  .qr-tab.upi.active    { background: #667eea; }
+  .qr-tab.gpay.active   { background: #4285F4; }
+  .qr-tab.phonepe.active{ background: #5f259f; }
+  .qr-tab.paytm.active  { background: #00BAF2; }
+
+  .qr-wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 20px; background: #f7fafc; border-radius: 12px; border: 1.5px dashed #e2e8f0; }
+  #qrcode { background: white; padding: 12px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+  #qrcode canvas, #qrcode img { display: block; }
+  .qr-app-label { font-size: 15px; font-weight: 700; color: #2d3748; }
+  .qr-instruction { font-size: 12px; color: #718096; text-align: center; line-height: 1.6; }
+  .download-btn { background: #667eea; color: white; border: none; padding: 10px 24px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+  .download-btn:hover { background: #5a67d8; }
+
+  .url-preview { background: #1a202c; border-radius: 8px; padding: 12px 14px; margin-top: 16px; }
+  .url-preview .url-label { font-size: 11px; color: #718096; margin-bottom: 6px; }
+  .url-preview code { font-size: 11px; color: #68d391; word-break: break-all; line-height: 1.6; font-family: 'Courier New', monospace; }
+  .copy-btn { margin-top: 8px; background: #2d3748; border: none; color: #a0aec0; font-size: 11px; padding: 4px 10px; border-radius: 5px; cursor: pointer; }
+  .copy-btn:hover { color: #fff; }
+
+  /* Deep Link Buttons */
+  .apps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+  .app-btn { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 16px 8px; border: 2px solid #e2e8f0; border-radius: 12px; cursor: pointer; background: #fff; transition: all 0.2s; text-decoration: none; }
+  .app-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+  .app-btn .icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+  .app-btn .name { font-size: 13px; font-weight: 600; color: #2d3748; }
+  .app-btn .scheme { font-size: 10px; color: #a0aec0; }
+  .phonepe .icon { background: #5f259f; }
+  .paytm .icon { background: #00BAF2; }
+  .platform-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+  .tab { flex: 1; padding: 8px; border: 2px solid #e2e8f0; border-radius: 8px; background: #fff; font-size: 13px; font-weight: 600; color: #718096; cursor: pointer; transition: all 0.2s; text-align: center; }
+  .tab.active { border-color: #667eea; color: #667eea; background: #ebf4ff; }
+  .note { background: #fffbeb; border-left: 3px solid #f6ad55; padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 12px; color: #744210; line-height: 1.6; }
+  .divider { border: none; border-top: 1px solid #e2e8f0; margin: 16px 0; }
+  .badge { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 99px; font-weight: 600; margin-left: 6px; }
+  .badge.android { background: #c6f6d5; color: #276749; }
+  .badge.ios { background: #bee3f8; color: #2a69ac; }
+</style>
+</head>
+<body>
+
+<h1>🔗 UPI Deep Link Tester</h1>
+<p class="subtitle">Test deep links & scan QR codes to open GPay, PhonePe or Paytm</p>
+
+<!-- Payment Details -->
+<div class="card">
+  <h2>Payment Details</h2>
+  <div class="grid">
+    <div class="field full">
+      <label>UPI VPA (Payee Address)</label>
+      <input id="vpa" type="text" value="merchant@razorpay" placeholder="merchant@upi">
+    </div>
+    <div class="field">
+      <label>Payee Name</label>
+      <input id="name" type="text" value="Test Store" placeholder="My Store">
+    </div>
+    <div class="field">
+      <label>Amount (₹)</label>
+      <input id="amount" type="number" value="1.00" placeholder="100.00">
+    </div>
+    <div class="field full">
+      <label>Transaction Note</label>
+      <input id="note" type="text" value="Test Payment" placeholder="Order #1234">
+    </div>
+    <div class="field">
+      <label>Transaction Ref ID</label>
+      <input id="txnref" type="text" value="TXN123456" placeholder="order_abc123">
+    </div>
+    <div class="field">
+      <label>Merchant Category Code</label>
+      <input id="mcc" type="text" value="5411" placeholder="5411">
+    </div>
+  </div>
+</div>
+
+<!-- QR Code Section -->
+<div class="card">
+  <h2>📷 Scan QR Code to Open App</h2>
+  <div class="qr-tabs">
+    <div class="qr-tab upi active"  onclick="setQRApp('upi', this)">🔷 Any UPI</div>
+    <div class="qr-tab gpay"        onclick="setQRApp('gpay', this)">💳 GPay</div>
+    <div class="qr-tab phonepe"     onclick="setQRApp('phonepe', this)">💜 PhonePe</div>
+    <div class="qr-tab paytm"       onclick="setQRApp('paytm', this)">💙 Paytm</div>
+  </div>
+
+  <div class="qr-wrap">
+    <div id="qrcode"></div>
+    <div class="qr-app-label" id="qr-app-label">Any UPI App</div>
+    <div class="qr-instruction" id="qr-instruction">
+      Open <strong>GPay, PhonePe, Paytm or any UPI app</strong> → tap the scanner → scan this QR
+    </div>
+    <button class="download-btn" onclick="downloadQR()">⬇️ Download QR</button>
+  </div>
+
+  <div class="url-preview">
+    <div class="url-label">QR Encoded URL</div>
+    <code id="qr-url-preview">—</code>
+    <br>
+    <button class="copy-btn" onclick="copyQRURL()">📋 Copy URL</button>
+  </div>
+</div>
+
+<!-- Deep Link Buttons -->
+<div class="card">
+  <h2>⚡ Launch App Directly (Mobile Only)</h2>
+  <div class="platform-tabs">
+    <div class="tab active" onclick="setPlatform('android', this)">🤖 Android</div>
+    <div class="tab" onclick="setPlatform('ios', this)">🍎 iOS</div>
+  </div>
+  <div class="apps">
+    <a class="app-btn gpay" href="#" onclick="return launchApp('gpay')">
+      <div class="icon">💳</div>
+      <div class="name">GPay</div>
+      <div class="scheme" id="gpay-scheme">tez://</div>
+    </a>
+    <a class="app-btn phonepe" href="#" onclick="return launchApp('phonepe')">
+      <div class="icon">💜</div>
+      <div class="name">PhonePe</div>
+      <div class="scheme" id="phonepe-scheme">phonepe://</div>
+    </a>
+    <a class="app-btn paytm" href="#" onclick="return launchApp('paytm')">
+      <div class="icon">💙</div>
+      <div class="name">Paytm</div>
+      <div class="scheme" id="paytm-scheme">paytmmp://</div>
+    </a>
+  </div>
+  <div class="note">
+    🤖 <strong>Android:</strong> Intent URLs work inside a native WebView / Android app only.<br>
+    🍎 <strong>iOS:</strong> Declare <code>tez</code>, <code>phonepe</code>, <code>paytmmp</code> in <code>Info.plist → LSApplicationQueriesSchemes</code>.
+  </div>
+</div>
+
+<script>
+let platform = 'android';
+let qrApp = 'upi';
+let qrInstance = null;
+let lastQRUrl = '';
+
+const qrAppInfo = {
+  upi:     { label: 'Any UPI App',  instruction: 'Open <strong>GPay, PhonePe, Paytm or any UPI app</strong> → tap the scanner → scan this QR' },
+  gpay:    { label: 'Google Pay',   instruction: 'Open <strong>Google Pay</strong> → tap the camera/scan icon → scan this QR' },
+  phonepe: { label: 'PhonePe',      instruction: 'Open <strong>PhonePe</strong> → tap the scan QR icon on the home screen → scan' },
+  paytm:   { label: 'Paytm',        instruction: 'Open <strong>Paytm</strong> → tap the scan icon at the top → scan this QR' },
+};
+
+const deepLinks = {
+  android: {
+    gpay:    p => `intent://upi/pay?${p}#Intent;scheme=tez;package=com.google.android.apps.npe;end`,
+    phonepe: p => `intent://pay?${p}#Intent;scheme=phonepe;package=com.phonepe.app;end`,
+    paytm:   p => `intent://pay?${p}#Intent;action=android.intent.action.VIEW;scheme=paytmmp;package=net.one97.paytm;end`,
+  },
+  ios: {
+    gpay:    p => `tez://upi/pay?${p}`,
+    phonepe: p => `phonepe://pay?${p}`,
+    paytm:   p => `paytmmp://pay?${p}`,
+  }
+};
+
+const schemeLabels = {
+  android: { gpay: 'intent:tez', phonepe: 'intent:phonepe', paytm: 'intent:paytmmp' },
+  ios:     { gpay: 'tez://',     phonepe: 'phonepe://',      paytm: 'paytmmp://' }
+};
+
+function getParams() {
+  const p = new URLSearchParams();
+  p.set('pa', document.getElementById('vpa').value || 'merchant@razorpay');
+  p.set('pn', document.getElementById('name').value || 'Merchant');
+  p.set('am', document.getElementById('amount').value || '1.00');
+  p.set('cu', 'INR');
+  p.set('tn', document.getElementById('note').value || 'Payment');
+  const tr = document.getElementById('txnref').value;
+  const mc = document.getElementById('mcc').value;
+  if (tr) p.set('tr', tr);
+  if (mc) p.set('mc', mc);
+  return p.toString();
+}
+
+function getQRUrl(app) {
+  const p = getParams();
+  switch(app) {
+    case 'gpay':    return `tez://upi/pay?${p}`;
+    case 'phonepe': return `phonepe://pay?${p}`;
+    case 'paytm':   return `paytmmp://pay?${p}`;
+    default:        return `upi://pay?${p}`;  // standard UPI — works with any app
+  }
+}
+
+function generateQR() {
+  const url = getQRUrl(qrApp);
+  lastQRUrl = url;
+  document.getElementById('qr-url-preview').textContent = url;
+  document.getElementById('qr-app-label').textContent = qrAppInfo[qrApp].label;
+  document.getElementById('qr-instruction').innerHTML = qrAppInfo[qrApp].instruction;
+
+  const container = document.getElementById('qrcode');
+  container.innerHTML = '';
+  qrInstance = new QRCode(container, {
+    text: url,
+    width: 200,
+    height: 200,
+    colorDark: '#1a202c',
+    colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.H
+  });
+}
+
+function setQRApp(app, el) {
+  qrApp = app;
+  document.querySelectorAll('.qr-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  generateQR();
+}
+
+function downloadQR() {
+  const canvas = document.querySelector('#qrcode canvas');
+  if (!canvas) return;
+  const link = document.createElement('a');
+  link.download = `upi-qr-${qrApp}.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+}
+
+function copyQRURL() {
+  navigator.clipboard.writeText(lastQRUrl).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = '✅ Copied!';
+    setTimeout(() => btn.textContent = '📋 Copy URL', 2000);
+  });
+}
+
+function launchApp(app) {
+  const url = deepLinks[platform][app](getParams());
+  window.location.href = url;
+  return false;
+}
+
+function setPlatform(p, el) {
+  platform = p;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  ['gpay','phonepe','paytm'].forEach(app => {
+    document.getElementById(app+'-scheme').textContent = schemeLabels[p][app];
+  });
+}
+
+document.querySelectorAll('input').forEach(inp => {
+  inp.addEventListener('input', generateQR);
+});
+
+generateQR();
+</script>
+</body>
+</html>
